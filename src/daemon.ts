@@ -228,6 +228,25 @@ export async function startDaemon(): Promise<void> {
 
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
+  process.on('SIGHUP', shutdown);
+
+  // Handle unexpected errors - always cleanup
+  process.on('uncaughtException', (err) => {
+    console.error('Uncaught exception:', err);
+    cleanupSocket();
+    process.exit(1);
+  });
+
+  process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled rejection:', reason);
+    cleanupSocket();
+    process.exit(1);
+  });
+
+  // Cleanup on normal exit
+  process.on('exit', () => {
+    cleanupSocket();
+  });
 
   // Keep process alive
   process.stdin.resume();

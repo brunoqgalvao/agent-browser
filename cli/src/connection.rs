@@ -172,20 +172,60 @@ pub fn ensure_daemon(session: &str, headed: bool) -> Result<(), String> {
         .find(|p| p.exists())
         .ok_or("Daemon not found. Run from project directory or ensure daemon.js is alongside binary.")?;
 
-    let mut cmd = Command::new("node");
-    cmd.arg(daemon_path)
-        .env("AGENT_BROWSER_DAEMON", "1")
-        .env("AGENT_BROWSER_SESSION", session);
+    // Spawn daemon as a fully detached background process
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        
+        let mut cmd = Command::new("node");
+        cmd.arg(daemon_path)
+            .env("AGENT_BROWSER_DAEMON", "1")
+            .env("AGENT_BROWSER_SESSION", session);
 
-    if headed {
-        cmd.env("AGENT_BROWSER_HEADED", "1");
+        if headed {
+            cmd.env("AGENT_BROWSER_HEADED", "1");
+        }
+
+        // Create new process group and session to fully detach
+        unsafe {
+            cmd.pre_exec(|| {
+                // Create new session (detach from terminal)
+                libc::setsid();
+                Ok(())
+            });
+        }
+
+        cmd.stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .map_err(|e| format!("Failed to start daemon: {}", e))?;
     }
 
-    cmd.stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .map_err(|e| format!("Failed to start daemon: {}", e))?;
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        
+        let mut cmd = Command::new("node");
+        cmd.arg(daemon_path)
+            .env("AGENT_BROWSER_DAEMON", "1")
+            .env("AGENT_BROWSER_SESSION", session);
+
+        if headed {
+            cmd.env("AGENT_BROWSER_HEADED", "1");
+        }
+
+        // CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS
+        const CREATE_NEW_PROCESS_GROUP: u32 = 0x00000200;
+        const DETACHED_PROCESS: u32 = 0x00000008;
+        
+        cmd.creation_flags(CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .map_err(|e| format!("Failed to start daemon: {}", e))?;
+    }
 
     for _ in 0..50 {
         if daemon_ready(session) {
