@@ -1893,7 +1893,7 @@ async function handleInputTouch(
 
 /**
  * Record browser session as an animated GIF
- * Uses CDP screencast to capture frames, then encodes to GIF
+ * Uses screenshot-based capture for reliable headless recording
  */
 async function handleGifRecord(
   command: GifRecordCommand,
@@ -1901,7 +1901,6 @@ async function handleGifRecord(
 ): Promise<Response<{ path: string; frames: number; duration: number; size: number }>> {
   const fps = command.fps ?? 10;
   const duration = command.duration;
-  const width = command.width ?? 800;
 
   // Dynamically import gif-encoder-2 and pngjs
   const [{ default: GIFEncoder }, { PNG }] = await Promise.all([
@@ -1910,26 +1909,18 @@ async function handleGifRecord(
   ]);
 
   const frames: Buffer[] = [];
+  const interval = 1000 / fps;
+  const frameCount = Math.ceil(duration / interval);
 
-  // Collect screencast frames
-  const collectFrames = (frame: ScreencastFrame) => {
-    const buffer = Buffer.from(frame.data, 'base64');
-    frames.push(buffer);
-  };
-
-  // Start screencast
-  await browser.startScreencast(collectFrames, {
-    format: 'png',
-    quality: 80,
-    maxWidth: width,
-    everyNthFrame: Math.max(1, Math.floor(60 / fps)),
-  });
-
-  // Wait for duration
-  await new Promise((resolve) => setTimeout(resolve, duration));
-
-  // Stop screencast
-  await browser.stopScreencast();
+  // Capture frames via screenshots (works in headless mode)
+  const page = browser.getPage();
+  for (let i = 0; i < frameCount; i++) {
+    const screenshot = await page.screenshot({ type: 'png' });
+    frames.push(screenshot);
+    if (i < frameCount - 1) {
+      await new Promise((resolve) => setTimeout(resolve, interval));
+    }
+  }
 
   if (frames.length === 0) {
     throw new Error('No frames captured during recording');
@@ -1942,7 +1933,7 @@ async function handleGifRecord(
 
   // Create GIF encoder
   const encoder = new GIFEncoder(actualWidth, actualHeight, 'neuquant', true);
-  encoder.setDelay(Math.floor(1000 / fps));
+  encoder.setDelay(Math.floor(interval));
   encoder.setQuality(10);
 
   encoder.start();
