@@ -599,6 +599,15 @@ const screencastStopSchema = baseCommandSchema.extend({
   action: z.literal('screencast_stop'),
 });
 
+// GIF recording schema
+const gifRecordSchema = baseCommandSchema.extend({
+  action: z.literal('gif_record'),
+  path: z.string(),
+  duration: z.number().positive(),
+  fps: z.number().positive().optional(),
+  width: z.number().positive().optional(),
+});
+
 // Input injection schemas for pair browsing
 const inputMouseSchema = baseCommandSchema.extend({
   action: z.literal('input_mouse'),
@@ -846,6 +855,7 @@ const commandSchema = z.discriminatedUnion('action', [
   responseBodySchema,
   screencastStartSchema,
   screencastStopSchema,
+  gifRecordSchema,
   inputMouseSchema,
   inputKeyboardSchema,
   inputTouchSchema,
