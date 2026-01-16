@@ -427,6 +427,40 @@ pub fn parse_command(args: &[String], flags: &Flags) -> Result<Value, ParseError
             }
         }
 
+        // === Recording ===
+        "gif" | "record" => {
+            // gif <path> <duration_seconds> [--fps <fps>] [--width <width>]
+            let path = rest.get(0).ok_or_else(|| ParseError::MissingArguments {
+                context: "gif".to_string(),
+                usage: "gif <path> <duration_seconds> [--fps <fps>] [--width <width>]",
+            })?;
+            let duration_str = rest.get(1).ok_or_else(|| ParseError::MissingArguments {
+                context: "gif".to_string(),
+                usage: "gif <path> <duration_seconds> [--fps <fps>] [--width <width>]",
+            })?;
+            let duration_secs: f64 = duration_str.parse().map_err(|_| ParseError::MissingArguments {
+                context: "gif".to_string(),
+                usage: "gif <path> <duration_seconds> [--fps <fps>] [--width <width>]",
+            })?;
+            let duration_ms = (duration_secs * 1000.0) as u64;
+
+            // Parse optional flags
+            let fps_idx = rest.iter().position(|&s| s == "--fps");
+            let fps = fps_idx.and_then(|i| rest.get(i + 1).and_then(|s| s.parse::<u32>().ok())).unwrap_or(10);
+
+            let width_idx = rest.iter().position(|&s| s == "--width");
+            let width = width_idx.and_then(|i| rest.get(i + 1).and_then(|s| s.parse::<u32>().ok())).unwrap_or(800);
+
+            Ok(json!({
+                "id": id,
+                "action": "gif_record",
+                "path": path,
+                "duration": duration_ms,
+                "fps": fps,
+                "width": width
+            }))
+        }
+
         // === Debug ===
         "trace" => {
             const VALID: &[&str] = &["start", "stop"];

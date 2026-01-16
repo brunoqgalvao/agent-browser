@@ -197,11 +197,13 @@ export async function startDaemon(options?: { streamPort?: number }): Promise<vo
                   .map((p) => p.trim())
                   .filter(Boolean)
               : undefined;
+            const userDataDir = process.env.AGENT_BROWSER_USER_DATA_DIR;
             await browser.launch({
               id: 'auto',
               action: 'launch',
-              headless: true,
+              headless: userDataDir ? false : true, // User profile needs headed mode
               executablePath: process.env.AGENT_BROWSER_EXECUTABLE_PATH,
+              userDataDir: userDataDir,
               extensions: extensions,
             });
           }

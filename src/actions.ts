@@ -1,5 +1,6 @@
 import type { Page, Frame } from 'playwright-core';
 import type { BrowserManager, ScreencastFrame } from './browser.js';
+import fs from 'node:fs';
 import type {
   Command,
   Response,
@@ -96,6 +97,7 @@ import type {
   ResponseBodyCommand,
   ScreencastStartCommand,
   ScreencastStopCommand,
+  GifRecordCommand,
   InputMouseCommand,
   InputKeyboardCommand,
   InputTouchCommand,
@@ -421,6 +423,8 @@ export async function executeCommand(command: Command, browser: BrowserManager):
         return await handleScreencastStart(command, browser);
       case 'screencast_stop':
         return await handleScreencastStop(command, browser);
+      case 'gif_record':
+        return await handleGifRecord(command, browser);
       case 'input_mouse':
         return await handleInputMouse(command, browser);
       case 'input_keyboard':
@@ -1885,4 +1889,82 @@ async function handleInputTouch(
     modifiers: command.modifiers,
   });
   return successResponse(command.id, { injected: true });
+}
+
+/**
+ * Record browser session as an animated GIF
+ * Uses CDP screencast to capture frames, then encodes to GIF
+ */
+async function handleGifRecord(
+  command: GifRecordCommand,
+  browser: BrowserManager
+): Promise<Response<{ path: string; frames: number; duration: number; size: number }>> {
+  const fps = command.fps ?? 10;
+  const duration = command.duration;
+  const width = command.width ?? 800;
+
+  // Dynamically import gif-encoder-2 and pngjs
+  const [{ default: GIFEncoder }, { PNG }] = await Promise.all([
+    import('gif-encoder-2'),
+    import('pngjs'),
+  ]);
+
+  const frames: Buffer[] = [];
+
+  // Collect screencast frames
+  const collectFrames = (frame: ScreencastFrame) => {
+    const buffer = Buffer.from(frame.data, 'base64');
+    frames.push(buffer);
+  };
+
+  // Start screencast
+  await browser.startScreencast(collectFrames, {
+    format: 'png',
+    quality: 80,
+    maxWidth: width,
+    everyNthFrame: Math.max(1, Math.floor(60 / fps)),
+  });
+
+  // Wait for duration
+  await new Promise((resolve) => setTimeout(resolve, duration));
+
+  // Stop screencast
+  await browser.stopScreencast();
+
+  if (frames.length === 0) {
+    throw new Error('No frames captured during recording');
+  }
+
+  // Parse first frame to get dimensions
+  const firstPng = PNG.sync.read(frames[0]);
+  const actualWidth = firstPng.width;
+  const actualHeight = firstPng.height;
+
+  // Create GIF encoder
+  const encoder = new GIFEncoder(actualWidth, actualHeight, 'neuquant', true);
+  encoder.setDelay(Math.floor(1000 / fps));
+  encoder.setQuality(10);
+
+  encoder.start();
+
+  // Add each frame
+  for (const frameBuffer of frames) {
+    const png = PNG.sync.read(frameBuffer);
+    encoder.addFrame(png.data);
+  }
+
+  encoder.finish();
+
+  // Write GIF to file
+  const gifBuffer = encoder.out.getData();
+  fs.writeFileSync(command.path, gifBuffer);
+
+  const stats = fs.statSync(command.path);
+
+  return successResponse(command.id, {
+    path: command.path,
+    frames: frames.length,
+    duration,
+    size: stats.size,
+  });
 }

@@ -14,6 +14,7 @@ export interface LaunchCommand extends BaseCommand {
   browser?: 'chromium' | 'firefox' | 'webkit';
   headers?: Record<string, string>;
   executablePath?: string;
+  userDataDir?: string;
   cdpPort?: number;
   extensions?: string[];
 }
@@ -473,6 +474,15 @@ export interface ScreencastStopCommand extends BaseCommand {
   action: 'screencast_stop';
 }
 
+// GIF recording command - captures screencast frames and encodes to GIF
+export interface GifRecordCommand extends BaseCommand {
+  action: 'gif_record';
+  path: string;
+  duration: number; // Duration in milliseconds
+  fps?: number; // Frames per second (default: 10)
+  width?: number; // Max width (default: 800)
+}
+
 // Input injection commands for pair browsing
 export interface InputMouseCommand extends BaseCommand {
   action: 'input_mouse';
@@ -888,6 +898,7 @@ export type Command =
   | ResponseBodyCommand
   | ScreencastStartCommand
   | ScreencastStopCommand
+  | GifRecordCommand
   | InputMouseCommand
   | InputKeyboardCommand
   | InputTouchCommand;

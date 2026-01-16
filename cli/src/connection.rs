@@ -163,6 +163,7 @@ pub fn ensure_daemon(
     session: &str,
     headed: bool,
     executable_path: Option<&str>,
+    user_data_dir: Option<&str>,
     extensions: &[String],
 ) -> Result<DaemonResult, String> {
     if is_daemon_running(session) && daemon_ready(session) {
@@ -201,6 +202,10 @@ pub fn ensure_daemon(
 
         if let Some(path) = executable_path {
             cmd.env("AGENT_BROWSER_EXECUTABLE_PATH", path);
+        }
+
+        if let Some(dir) = user_data_dir {
+            cmd.env("AGENT_BROWSER_USER_DATA_DIR", dir);
         }
 
         if !extensions.is_empty() {
@@ -243,6 +248,10 @@ pub fn ensure_daemon(
 
         if let Some(path) = executable_path {
             cmd.env("AGENT_BROWSER_EXECUTABLE_PATH", path);
+        }
+
+        if let Some(dir) = user_data_dir {
+            cmd.env("AGENT_BROWSER_USER_DATA_DIR", dir);
         }
 
         if !extensions.is_empty() {

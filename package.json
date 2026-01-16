@@ -1,7 +1,7 @@
 {
-  "name": "agent-browser",
-  "version": "0.5.0",
-  "description": "Headless browser automation CLI for AI agents",
+  "name": "agent-browser-navi",
+  "version": "0.6.0",
+  "description": "Headless browser automation CLI for AI agents with GIF recording and auth support",
   "type": "module",
   "main": "dist/daemon.js",
   "files": [
@@ -11,10 +11,10 @@
     "skills"
   ],
   "bin": {
-    "agent-browser": "./bin/agent-browser"
+    "agent-browser-navi": "./bin/agent-browser"
   },
   "scripts": {
-    "prepare": "husky",
+    "prepare": "node -e \"try { require('husky')() } catch {}\"",
     "version:sync": "node scripts/sync-version.js",
     "version": "npm run version:sync && git add cli/Cargo.toml",
     "build": "tsc",
@@ -31,8 +31,7 @@
     "format": "prettier --write 'src/**/*.ts'",
     "format:check": "prettier --check 'src/**/*.ts'",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "postinstall": "node scripts/postinstall.js"
+    "test:watch": "vitest"
   },
   "keywords": [
     "browser",
@@ -40,24 +39,30 @@
     "headless",
     "playwright",
     "cli",
-    "agent"
+    "agent",
+    "gif",
+    "recording"
   ],
+  "author": "Bruno Q. Galvao",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vercel-labs/agent-browser.git"
+    "url": "git+https://github.com/brunoqgalvao/agent-browser.git"
   },
   "bugs": {
-    "url": "https://github.com/vercel-labs/agent-browser/issues"
+    "url": "https://github.com/brunoqgalvao/agent-browser/issues"
   },
-  "homepage": "https://github.com/vercel-labs/agent-browser#readme",
+  "homepage": "https://github.com/brunoqgalvao/agent-browser#readme",
   "dependencies": {
+    "gif-encoder-2": "^1.0.5",
     "playwright-core": "^1.57.0",
+    "pngjs": "^7.0.0",
     "ws": "^8.19.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
+    "@types/pngjs": "^6.0.5",
     "@types/ws": "^8.18.1",
     "husky": "^9.1.7",
     "lint-staged": "^15.2.11",

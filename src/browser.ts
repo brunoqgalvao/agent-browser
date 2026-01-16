@@ -662,28 +662,46 @@ export class BrowserManager {
     }
 
     const browserType = options.browser ?? 'chromium';
+    const userDataDir = options.userDataDir;
     if (hasExtensions && browserType !== 'chromium') {
       throw new Error('Extensions are only supported in Chromium');
+    }
+    if (userDataDir && browserType !== 'chromium') {
+      throw new Error('User data directory is only supported in Chromium');
     }
 
     const launcher =
       browserType === 'firefox' ? firefox : browserType === 'webkit' ? webkit : chromium;
     const viewport = options.viewport ?? { width: 1280, height: 720 };
+    const usePersistentContext = hasExtensions || !!userDataDir;
 
     let context: BrowserContext;
-    if (hasExtensions) {
-      const extPaths = options.extensions!.join(',');
-      const session = process.env.AGENT_BROWSER_SESSION || 'default';
-      context = await launcher.launchPersistentContext(
-        path.join(os.tmpdir(), `agent-browser-ext-${session}`),
-        {
-          headless: false,
-          executablePath: options.executablePath,
-          args: [`--disable-extensions-except=${extPaths}`, `--load-extension=${extPaths}`],
-          viewport,
-          extraHTTPHeaders: options.headers,
-        }
-      );
+    if (usePersistentContext) {
+      // Use persistent context for extensions or user data directory (auth sessions)
+      const args: string[] = [];
+      let contextPath: string;
+
+      if (hasExtensions) {
+        const extPaths = options.extensions!.join(',');
+        args.push(`--disable-extensions-except=${extPaths}`, `--load-extension=${extPaths}`);
+      }
+
+      if (userDataDir) {
+        // Use the user's Chrome profile for authenticated sessions
+        contextPath = userDataDir;
+      } else {
+        // Use a temporary directory for extensions only
+        const session = process.env.AGENT_BROWSER_SESSION || 'default';
+        contextPath = path.join(os.tmpdir(), `agent-browser-ext-${session}`);
+      }
+
+      context = await launcher.launchPersistentContext(contextPath, {
+        headless: userDataDir ? false : options.headless ?? false, // User profile needs headed mode
+        executablePath: options.executablePath,
+        args: args.length > 0 ? args : undefined,
+        viewport,
+        extraHTTPHeaders: options.headers,
+      });
       this.isPersistentContext = true;
     } else {
       this.browser = await launcher.launch({
