@@ -5,6 +5,7 @@ pub struct Flags {
     pub full: bool,
     pub headed: bool,
     pub debug: bool,
+    pub auth: bool,  // Use persistent auth profile
     pub session: String,
     pub headers: Option<String>,
     pub executable_path: Option<String>,
@@ -24,6 +25,7 @@ pub fn parse_flags(args: &[String]) -> Flags {
         full: false,
         headed: false,
         debug: false,
+        auth: env::var("AGENT_BROWSER_AUTH").map(|v| v == "1" || v == "true").unwrap_or(false),
         session: env::var("AGENT_BROWSER_SESSION").unwrap_or_else(|_| "default".to_string()),
         headers: None,
         executable_path: env::var("AGENT_BROWSER_EXECUTABLE_PATH").ok(),
@@ -39,6 +41,7 @@ pub fn parse_flags(args: &[String]) -> Flags {
             "--full" | "-f" => flags.full = true,
             "--headed" => flags.headed = true,
             "--debug" => flags.debug = true,
+            "--auth" => flags.auth = true,
             "--session" => {
                 if let Some(s) = args.get(i + 1) {
                     flags.session = s.clone();
@@ -87,7 +90,7 @@ pub fn clean_args(args: &[String]) -> Vec<String> {
     let mut skip_next = false;
 
     // Global flags that should be stripped from command args
-    const GLOBAL_FLAGS: &[&str] = &["--json", "--full", "--headed", "--debug"];
+    const GLOBAL_FLAGS: &[&str] = &["--json", "--full", "--headed", "--debug", "--auth"];
     // Global flags that take a value (need to skip the next arg too)
     const GLOBAL_FLAGS_WITH_VALUE: &[&str] = &["--session", "--headers", "--executable-path", "--user-data-dir", "--profile", "--cdp", "--extension"];
 

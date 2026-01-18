@@ -689,6 +689,11 @@ export class BrowserManager {
       if (userDataDir) {
         // Use the user's Chrome profile for authenticated sessions
         contextPath = userDataDir;
+        // Make browser appear non-automated for auth sessions
+        args.push(
+          '--disable-blink-features=AutomationControlled',
+          '--disable-infobars',
+        );
       } else {
         // Use a temporary directory for extensions only
         const session = process.env.AGENT_BROWSER_SESSION || 'default';
@@ -701,6 +706,10 @@ export class BrowserManager {
         args: args.length > 0 ? args : undefined,
         viewport,
         extraHTTPHeaders: options.headers,
+        // Stealth settings for auth sessions
+        ...(userDataDir ? {
+          ignoreDefaultArgs: ['--enable-automation'],
+        } : {}),
       });
       this.isPersistentContext = true;
     } else {

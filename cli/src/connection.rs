@@ -162,6 +162,7 @@ pub struct DaemonResult {
 pub fn ensure_daemon(
     session: &str,
     headed: bool,
+    auth: bool,
     executable_path: Option<&str>,
     user_data_dir: Option<&str>,
     extensions: &[String],
@@ -198,6 +199,10 @@ pub fn ensure_daemon(
 
         if headed {
             cmd.env("AGENT_BROWSER_HEADED", "1");
+        }
+
+        if auth {
+            cmd.env("AGENT_BROWSER_AUTH", "1");
         }
 
         if let Some(path) = executable_path {
@@ -244,6 +249,10 @@ pub fn ensure_daemon(
 
         if headed {
             cmd.env("AGENT_BROWSER_HEADED", "1");
+        }
+
+        if auth {
+            cmd.env("AGENT_BROWSER_AUTH", "1");
         }
 
         if let Some(path) = executable_path {

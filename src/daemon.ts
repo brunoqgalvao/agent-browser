@@ -197,11 +197,23 @@ export async function startDaemon(options?: { streamPort?: number }): Promise<vo
                   .map((p) => p.trim())
                   .filter(Boolean)
               : undefined;
-            const userDataDir = process.env.AGENT_BROWSER_USER_DATA_DIR;
+
+            // Determine user data directory
+            let userDataDir = process.env.AGENT_BROWSER_USER_DATA_DIR;
+            const useAuth = process.env.AGENT_BROWSER_AUTH === '1';
+
+            if (useAuth && !userDataDir) {
+              // Use default persistent auth profile
+              const homeDir = process.env.HOME || process.env.USERPROFILE || '';
+              userDataDir = `${homeDir}/.agent-browser-navi/profile`;
+            }
+
+            const useHeaded = !!userDataDir || process.env.AGENT_BROWSER_HEADED === '1';
+
             await browser.launch({
               id: 'auto',
               action: 'launch',
-              headless: userDataDir ? false : true, // User profile needs headed mode
+              headless: !useHeaded,
               executablePath: process.env.AGENT_BROWSER_EXECUTABLE_PATH,
               userDataDir: userDataDir,
               extensions: extensions,

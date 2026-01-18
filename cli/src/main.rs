@@ -149,7 +149,7 @@ fn main() {
         }
     };
 
-    let daemon_result = match ensure_daemon(&flags.session, flags.headed, flags.executable_path.as_deref(), flags.user_data_dir.as_deref(), &flags.extensions) {
+    let daemon_result = match ensure_daemon(&flags.session, flags.headed, flags.auth, flags.executable_path.as_deref(), flags.user_data_dir.as_deref(), &flags.extensions) {
         Ok(result) => result,
         Err(e) => {
             if flags.json {
@@ -161,17 +161,20 @@ fn main() {
         }
     };
 
-    // Warn if executable_path/user_data_dir/extensions was specified but daemon was already running
-    if daemon_result.already_running && (flags.executable_path.is_some() || flags.user_data_dir.is_some() || !flags.extensions.is_empty()) {
+    // Warn if auth/executable_path/user_data_dir/extensions was specified but daemon was already running
+    if daemon_result.already_running && (flags.auth || flags.executable_path.is_some() || flags.user_data_dir.is_some() || !flags.extensions.is_empty()) {
         if !flags.json {
+            if flags.auth {
+                eprintln!("\x1b[33m⚠\x1b[0m --auth ignored: daemon already running. Use 'agent-browser-navi close' first to restart with auth profile.");
+            }
             if flags.executable_path.is_some() {
-                eprintln!("\x1b[33m⚠\x1b[0m --executable-path ignored: daemon already running. Use 'agent-browser close' first to restart with new path.");
+                eprintln!("\x1b[33m⚠\x1b[0m --executable-path ignored: daemon already running. Use 'agent-browser-navi close' first to restart with new path.");
             }
             if flags.user_data_dir.is_some() {
-                eprintln!("\x1b[33m⚠\x1b[0m --user-data-dir ignored: daemon already running. Use 'agent-browser close' first to restart with user profile.");
+                eprintln!("\x1b[33m⚠\x1b[0m --user-data-dir ignored: daemon already running. Use 'agent-browser-navi close' first to restart with user profile.");
             }
             if !flags.extensions.is_empty() {
-                eprintln!("\x1b[33m⚠\x1b[0m --extension ignored: daemon already running. Use 'agent-browser close' first to restart with extensions.");
+                eprintln!("\x1b[33m⚠\x1b[0m --extension ignored: daemon already running. Use 'agent-browser-navi close' first to restart with extensions.");
             }
         }
     }
